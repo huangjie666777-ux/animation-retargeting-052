@@ -135,3 +135,45 @@ export function rootMotionWalkClip(): AnimationClip {
     ],
   };
 }
+
+/**
+ * 重定向目标骨架：骨名完全不同、绑定朝向不同（含绕 Y/Z 的绑定旋转）、
+ * 骨长不同；并在 torso 与 cranium 之间插入未映射的 neck 骨。
+ * pelvis(根) -> torso -> shoulder.R -> palm.R；torso -> neck -> cranium；
+ * torso -> shoulder.L -> palm.L；pelvis -> thigh.L / thigh.R。
+ */
+export function retargetTargetBones(): BoneSpec[] {
+  const bone = (
+    id: string,
+    parentId: string | null,
+    t: Vec3,
+    r: Quat = IDENTITY_QUAT,
+  ): BoneSpec => ({ id, parentId, translation: t, rotation: r, scale: UNIT_SCALE });
+  return [
+    bone('pelvis', null, [0, 0.8, 0], quatY(0.1)),
+    bone('torso', 'pelvis', [0, 0.4, 0], quatZ(0.2)),
+    bone('neck', 'torso', [0, 0.2, 0], quatY(0.3)), // 未映射中间骨
+    bone('cranium', 'neck', [0, 0.3, 0], quatZ(-0.1)),
+    bone('shoulder.R', 'torso', [0.5, 0.1, 0], quatZ(0.3)),
+    bone('palm.R', 'shoulder.R', [0, 0.4, 0], quatY(-0.5)),
+    bone('shoulder.L', 'torso', [-0.5, 0.1, 0], quatZ(-0.3)),
+    bone('palm.L', 'shoulder.L', [0, -0.4, 0], quatY(0.5)),
+    bone('thigh.L', 'pelvis', [0.2, 0, 0], quatZ(0.15)),
+    bone('thigh.R', 'pelvis', [-0.2, 0, 0], quatZ(-0.15)),
+  ];
+}
+
+/** 源人形骨架 -> 重定向目标骨架的一一映射（neck 不映射）。 */
+export function retargetMapping(): Record<string, string> {
+  return {
+    hips: 'pelvis',
+    spine: 'torso',
+    head: 'cranium',
+    'arm.R': 'shoulder.R',
+    'hand.R': 'palm.R',
+    'arm.L': 'shoulder.L',
+    'hand.L': 'palm.L',
+    'leg.L': 'thigh.L',
+    'leg.R': 'thigh.R',
+  };
+}

@@ -108,9 +108,9 @@ export class RootMotionPlayer {
       if (!Number.isFinite(overlay.strength) || overlay.strength < 0 || overlay.strength > 1) {
         throw new Error('覆盖强度必须在 [0, 1]: ' + String(overlay.strength));
       }
-      // 顶层根权重恒为 0：即使提供遮罩也不能覆盖根。
-      const mask = { ...(overlay.mask ?? {}) };
-      mask[this.rootBoneId] = 0;
+      // 顶层根本身恒不被覆盖（下方钉回起始变换），但不能把根以显式 0 注入
+      // 遮罩：显式 0 会屏蔽后代继承权重，导致如 mask:{根:1} 时后代也失效。
+      const mask = overlay.mask;
       overlayLayer = {
         clip: overlay.clip,
         time: nextElapsed,

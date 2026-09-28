@@ -13,7 +13,7 @@ import {
   type AnimationClip,
   type RigidTransform,
 } from '../src/index.js';
-import { humanoidBones, quatY, rootMotionWalkClip } from './helpers.js';
+import { humanoidBones, quatY, quatZ, rootMotionWalkClip } from './helpers.js';
 
 const sk = new Skeleton(humanoidBones());
 
@@ -151,6 +151,24 @@ test('覆盖层可影响其他骨骼但不能改变根或贡献根运动（含�
   const frame = player.advance(0.5, { clip: rootOverride, strength: 1, mask: { hips: 1 } });
   assert.deepEqual(frame.localPose.get('hips')!.translation, [0, 1, 0]);
   assert.ok(Math.abs(frame.character.translation[0] - 0.2) < 1e-9);
+});
+
+test('屏蔽根覆盖时不会清空后代继承权重', () => {
+  const rootAndLeg: AnimationClip = {
+    name: 'override',
+    duration: 1,
+    tracks: [
+      { boneId: 'hips', translations: [{ time: 0, value: [9, 9, 9] }] },
+      { boneId: 'leg.L', rotations: [{ time: 0, value: quatZ(1) }] },
+    ],
+  };
+  const player = new RootMotionPlayer({ skeleton: sk, clip: rootMotionWalkClip(), rootBoneId: 'hips' });
+  // 仅给根显式权重：根必须被钉回，但未指定的后代应继续继承权重，不能被清空。
+  const frame = player.advance(0.5, { clip: rootAndLeg, strength: 1, mask: { hips: 1 } });
+  assert.deepEqual(frame.localPose.get('hips')!.translation, [0, 1, 0]);
+  assert.ok(
+    new Quaternion(...frame.localPose.get('leg.L')!.rotation).angleTo(new Quaternion(...quatZ(1))) < 1e-9,
+  );
 });
 
 test('拒绝非顶层根与非单位根缩放', () => {
